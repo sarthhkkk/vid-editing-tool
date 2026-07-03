@@ -93,38 +93,52 @@ dom.fileInput.addEventListener('change', () => {
 
 /* ── Video Loading ── */
 
+let _loadCancel = false;
+
 function loadVideo(file) {
+  _loadCancel = true;
+
   if (state.videoUrl) URL.revokeObjectURL(state.videoUrl);
 
   state.videoFile = file;
   state.videoUrl = URL.createObjectURL(file);
-  dom.video.src = state.videoUrl;
 
   dom.uploadSection.hidden = true;
   dom.editorSection.hidden = false;
   dom.exportBtn.disabled = true;
   dom.exportBtn.textContent = 'Loading...';
 
-  state.video.addEventListener(
-    'loadedmetadata',
-    () => {
-      state.videoWidth = dom.video.videoWidth;
-      state.videoHeight = dom.video.videoHeight;
-      state.duration = dom.video.duration;
-      dom.exportBtn.disabled = false;
-      dom.exportBtn.textContent = 'Export Video';
+  _loadCancel = false;
 
-      fitVideoContainer();
-      initCropOverlay();
-      initTrimControls();
-      initAspectControls();
-      initRotationControls();
-      syncDimensionInputs();
-      updateTrimDisplay();
-      updatePreview();
-    },
-    { once: true }
-  );
+  const onMeta = () => {
+    if (_loadCancel) return;
+    state.videoWidth = dom.video.videoWidth;
+    state.videoHeight = dom.video.videoHeight;
+    state.duration = dom.video.duration;
+    dom.exportBtn.disabled = false;
+    dom.exportBtn.textContent = 'Export Video';
+
+    fitVideoContainer();
+    initCropOverlay();
+    initTrimControls();
+    initAspectControls();
+    initRotationControls();
+    syncDimensionInputs();
+    updateTrimDisplay();
+    updatePreview();
+  };
+
+  const onError = () => {
+    if (_loadCancel) return;
+    dom.exportBtn.disabled = false;
+    dom.exportBtn.textContent = 'Error loading video';
+    dom.progressSection.hidden = false;
+    dom.progressText.textContent = 'Unsupported or corrupted file. Try a different video.';
+  };
+
+  state.video.addEventListener('loadedmetadata', onMeta, { once: true });
+  state.video.addEventListener('error', onError, { once: true });
+  dom.video.src = state.videoUrl;
 }
 
 function fitVideoContainer() {
