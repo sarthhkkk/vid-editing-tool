@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vid Crop Tool</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Vid Crop Tool</h1>
+      <p class="subtitle">crop, trim, export</p>
+    </header>
+
+    <main>
+      <div id="upload-section" class="card">
+        <div id="drop-zone">
+          <input type="file" id="file-input" accept="video/*" hidden>
+          <div id="drop-content">
+            <div class="upload-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </div>
+            <p>Drop a video file here or <span class="link" id="browse-link">browse</span></p>
+            <p class="hint">MP4, WebM, MOV, AVI supported</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="editor-section" class="card" hidden>
+        <div id="video-container">
+          <video id="video-player" controls preload="metadata"></video>
+          <div id="crop-overlay">
+            <div id="crop-box">
+              <div class="crop-handle nw"></div>
+              <div class="crop-handle n"></div>
+              <div class="crop-handle ne"></div>
+              <div class="crop-handle e"></div>
+              <div class="crop-handle se"></div>
+              <div class="crop-handle s"></div>
+              <div class="crop-handle sw"></div>
+              <div class="crop-handle w"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="controls">
+          <div class="control-group">
+            <h3>Trim</h3>
+            <div id="trim-section">
+              <div class="trim-row">
+                <span class="trim-label">Start</span>
+                <input type="range" id="trim-start" min="0" max="100" value="0" step="0.1">
+                <span id="trim-start-time" class="time-display">0:00</span>
+              </div>
+              <div class="trim-row">
+                <span class="trim-label">End</span>
+                <input type="range" id="trim-end" min="0" max="100" value="100" step="0.1">
+                <span id="trim-end-time" class="time-display">0:00</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <h3>Crop Region</h3>
+            <div id="crop-dimensions">
+              <div class="dim-row">
+                <div class="dim-field">
+                  <label>X</label>
+                  <input type="number" id="crop-x" min="0" step="1">
+                </div>
+                <div class="dim-field">
+                  <label>Y</label>
+                  <input type="number" id="crop-y" min="0" step="1">
+                </div>
+                <div class="dim-field">
+                  <label>Width</label>
+                  <input type="number" id="crop-w" min="1" step="1">
+                </div>
+                <div class="dim-field">
+                  <label>Height</label>
+                  <input type="number" id="crop-h" min="1" step="1">
+                </div>
+              </div>
+              <button id="reset-crop" class="btn btn-sm">Reset</button>
+            </div>
+          </div>
+
+          <div id="action-bar">
+            <button id="export-btn" class="btn btn-primary" disabled>
+              <span class="btn-text">Export Video</span>
+              <span class="btn-loader" hidden></span>
+            </button>
+            <div id="format-selector">
+              <label>Format:</label>
+              <select id="output-format">
+                <option value="mp4">MP4</option>
+                <option value="webm">WebM</option>
+                <option value="gif">GIF</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="progress-section" hidden>
+            <div class="progress-bar">
+              <div id="progress-fill"></div>
+            </div>
+            <p id="progress-text">Processing...</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
