@@ -30,7 +30,7 @@ body {
 }
 
 #app {
-  max-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 24px 20px;
 }
@@ -125,6 +125,22 @@ header h1 {
   padding: 16px;
 }
 
+#editor-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+#editor-left {
+  flex: 1;
+  min-width: 0;
+}
+
+#editor-right {
+  width: 260px;
+  flex-shrink: 0;
+}
+
 #video-container {
   position: relative;
   background: #000;
@@ -146,8 +162,6 @@ header h1 {
   inset: 0;
   pointer-events: none;
 }
-
-/* Dark areas outside crop box — managed by JS overlay segments */
 
 #crop-box {
   position: absolute;
@@ -189,9 +203,15 @@ header h1 {
 }
 
 .control-group {
-  margin-bottom: 16px;
-  padding-bottom: 16px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--border);
+}
+
+.control-group:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .control-group h3 {
@@ -203,6 +223,7 @@ header h1 {
   margin-bottom: 10px;
 }
 
+/* Trim */
 #trim-section {
   display: flex;
   flex-direction: column;
@@ -259,6 +280,7 @@ header h1 {
   text-align: right;
 }
 
+/* Crop dimensions */
 #crop-dimensions {
   display: flex;
   flex-direction: column;
@@ -298,11 +320,126 @@ header h1 {
   border-color: var(--accent);
 }
 
-#action-bar {
+/* Aspect ratio */
+#aspect-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.aspect-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--surface-hover);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.aspect-btn:hover {
+  color: var(--text);
+  border-color: var(--border-hover);
+}
+
+.aspect-btn.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Rotation */
+#rotation-controls {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-top: 4px;
+  gap: 6px;
+}
+
+.btn-icon {
+  padding: 6px 10px;
+  font-size: 14px;
+  background: var(--surface-hover);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+}
+
+.btn-icon:hover {
+  color: var(--text);
+  border-color: var(--border-hover);
+  background: var(--surface);
+}
+
+.btn-icon.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+#rotation-badge {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Preview panel */
+#preview-container {
+  background: #000;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  text-align: center;
+}
+
+#preview-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: auto;
+}
+
+.preview-dim {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 6px 0;
+  text-align: center;
+}
+
+/* Right panel */
+#bottom-actions {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#format-selector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+#format-selector select {
+  padding: 4px 8px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+
+#export-btn {
+  width: 100%;
 }
 
 .btn {
@@ -339,6 +476,9 @@ header h1 {
   background: var(--surface-hover);
   color: var(--text-muted);
   border: 1px solid var(--border);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
 }
 
 .btn-sm:hover {
@@ -346,25 +486,7 @@ header h1 {
   border-color: var(--border-hover);
 }
 
-#format-selector {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-#format-selector select {
-  padding: 4px 8px;
-  background: var(--surface-hover);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  font-size: 13px;
-  outline: none;
-  cursor: pointer;
-}
-
+/* Progress */
 #progress-section {
   margin-top: 12px;
 }
@@ -388,9 +510,23 @@ header h1 {
   font-size: 12px;
   color: var(--text-muted);
   margin-top: 4px;
+  text-align: center;
 }
 
 /* Hidden helper */
 [hidden] {
   display: none !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  #editor-layout {
+    flex-direction: column;
+  }
+  #editor-right {
+    width: 100%;
+  }
+  #app {
+    padding: 16px 12px;
+  }
 }

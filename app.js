@@ -12,6 +12,11 @@ const state = {
   dragging: null,
   dragStart: null,
   cropStart: null,
+  aspectLocked: false,
+  aspectRatio: null,
+  rotation: 0,
+  hflip: false,
+  vflip: false,
 };
 
 const $ = (s) => document.querySelector(s);
@@ -36,6 +41,14 @@ const dom = {
   cropW: $('#crop-w'),
   cropH: $('#crop-h'),
   resetCrop: $('#reset-crop'),
+  aspectBtns: $$('.aspect-btn'),
+  rotateCw: $('#rotate-cw'),
+  rotateCcw: $('#rotate-ccw'),
+  flipH: $('#flip-h'),
+  flipV: $('#flip-v'),
+  rotationBadge: $('#rotation-badge'),
+  previewCanvas: $('#preview-canvas'),
+  previewDim: $('#preview-dim-label'),
   exportBtn: $('#export-btn'),
   btnText: $('#export-btn .btn-text'),
   btnLoader: $('#export-btn .btn-loader'),
@@ -46,6 +59,7 @@ const dom = {
 };
 
 let overlaySegments = [];
+let previewAnimId = null;
 
 function formatTime(t) {
   const m = Math.floor(t / 60);
@@ -103,8 +117,11 @@ function loadVideo(file) {
       fitVideoContainer();
       initCropOverlay();
       initTrimControls();
+      initAspectControls();
+      initRotationControls();
       syncDimensionInputs();
       updateTrimDisplay();
+      updatePreview();
     },
     { once: true }
   );
@@ -206,6 +223,8 @@ function updateCropBox() {
   `;
 
   syncDimensionInputs();
+  updateOverlaySegments();
+  updatePreview();
 }
 
 function updateOverlaySegments() {
@@ -310,9 +329,9 @@ function onCropPointerMove(e) {
       break;
   }
 
+  c = constrainAspect(c, state.dragging);
   state.crop = c;
   updateCropBox();
-  updateOverlaySegments();
 }
 
 function onCropPointerUp() {
@@ -323,6 +342,117 @@ function onCropPointerUp() {
 
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
+}
+
+/* ── Aspect Ratio ── */
+
+function initAspectControls() {
+  dom.aspectBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      dom.aspectBtns.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const val = btn.dataset.ratio;
+      if (!val) {
+        state.aspectLocked = false;
+        state.aspectRatio = null;
+        return;
+      }
+
+      const parts = val.split(':');
+      state.aspectRatio = parseInt(parts[0]) / parseInt(parts[1]);
+      state.aspectLocked = true;
+
+      snapToAspectRatio();
+    });
+  });
+}
+
+function snapToAspectRatio() {
+  if (!state.aspectLocked || !state.aspectRatio) return;
+
+  const c = state.crop;
+  const ratio = state.aspectRatio;
+  const cw = Math.min(c.w, 100 - c.x);
+  const ch = cw / ratio;
+
+  if (c.y + ch <= 100) {
+    state.crop.h = ch;
+    state.crop.w = cw;
+  } else {
+    const ch2 = 100 - c.y;
+    state.crop.h = ch2;
+    state.crop.w = ch2 * ratio;
+    if (state.crop.x + state.crop.w > 100) {
+      state.crop.w = 100 - state.crop.x;
+      state.crop.h = state.crop.w / ratio;
+    }
+  }
+
+  updateCropBox();
+}
+
+function constrainAspect(c, handle) {
+  if (!state.aspectLocked || !state.aspectRatio) return c;
+  if (handle === 'move') return c;
+
+  const ratio = state.aspectRatio;
+  let nc = { ...c };
+
+  switch (handle) {
+    case 'se':
+    case 'ne':
+    case 'sw':
+    case 'nw':
+    case 'e':
+    case 'w':
+      nc.h = nc.w / ratio;
+      if (handle === 'nw' || handle === 'ne') {
+        nc.y = state.cropStart.y + state.cropStart.h - nc.h;
+      }
+      break;
+    case 'n':
+    case 's':
+      nc.w = nc.h * ratio;
+      break;
+  }
+
+  nc.x = clamp(nc.x, 0, 100 - nc.w);
+  nc.y = clamp(nc.y, 0, 100 - nc.h);
+  nc.w = clamp(nc.w, 5, 100 - nc.x);
+  nc.h = clamp(nc.h, 5, 100 - nc.y);
+
+  return nc;
+}
+
+/* ── Rotation ── */
+
+function initRotationControls() {
+  dom.rotateCw.addEventListener('click', () => {
+    state.rotation = (state.rotation + 90) % 360;
+    updateRotationBadge();
+  });
+  dom.rotateCcw.addEventListener('click', () => {
+    state.rotation = (state.rotation - 90 + 360) % 360;
+    updateRotationBadge();
+  });
+  dom.flipH.addEventListener('click', () => {
+    state.hflip = !state.hflip;
+    dom.flipH.classList.toggle('active');
+  });
+  dom.flipV.addEventListener('click', () => {
+    state.vflip = !state.vflip;
+    dom.flipV.classList.toggle('active');
+  });
+}
+
+function updateRotationBadge() {
+  const r = state.rotation;
+  const parts = [];
+  if (r > 0) parts.push(`${r}°`);
+  if (state.hflip) parts.push('⇔');
+  if (state.vflip) parts.push('⇕');
+  dom.rotationBadge.textContent = parts.join(' ') || '0°';
 }
 
 /* ── Dimension Inputs ── */
@@ -341,7 +471,6 @@ function updateCropFromInputs() {
   state.crop.h = clamp(h, 5, 100 - state.crop.y);
 
   updateCropBox();
-  updateOverlaySegments();
 }
 
 dom.cropX.addEventListener('input', updateCropFromInputs);
@@ -351,15 +480,17 @@ dom.cropH.addEventListener('input', updateCropFromInputs);
 
 dom.resetCrop.addEventListener('click', () => {
   state.crop = { x: 15, y: 10, w: 70, h: 80 };
+  dom.aspectBtns.forEach((b) => {
+    b.classList.toggle('active', b.dataset.ratio === '');
+  });
+  state.aspectLocked = false;
+  state.aspectRatio = null;
   updateCropBox();
-  updateOverlaySegments();
 });
 
 /* ── Trim Controls ── */
 
 function initTrimControls() {
-  const dur = state.duration;
-
   dom.trimStart.min = 0;
   dom.trimStart.max = 100;
   dom.trimStart.value = 0;
@@ -401,6 +532,54 @@ function updateTrimDisplay() {
   dom.trimEndTime.textContent = formatTime(tEnd);
 }
 
+/* ── Preview ── */
+
+function updatePreview() {
+  const video = dom.video;
+  const canvas = dom.previewCanvas;
+  const ctx = canvas.getContext('2d');
+
+  if (!state.videoFile || !video.videoWidth) {
+    canvas.width = 0;
+    canvas.height = 0;
+    dom.previewDim.textContent = '—';
+    return;
+  }
+
+  const cp = getCropPixels();
+
+  const maxPvw = dom.previewCanvas.parentElement.clientWidth - 0;
+
+  let pvw, pvh;
+  if (cp.w >= cp.h) {
+    pvw = Math.min(cp.w, maxPvw);
+    pvh = (pvw / cp.w) * cp.h;
+  } else {
+    pvh = Math.min(cp.h, 180);
+    pvw = (pvh / cp.h) * cp.w;
+  }
+
+  canvas.width = cp.w;
+  canvas.height = cp.h;
+  canvas.style.width = `${pvw}px`;
+  canvas.style.height = `${pvh}px`;
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(video, cp.x, cp.y, cp.w, cp.h, 0, 0, cp.w, cp.h);
+
+  dom.previewDim.textContent = `${cp.w} × ${cp.h}`;
+}
+
+dom.video.addEventListener('timeupdate', () => {
+  if (!state.videoFile) return;
+  if (previewAnimId) cancelAnimationFrame(previewAnimId);
+  previewAnimId = requestAnimationFrame(updatePreview);
+});
+
+dom.video.addEventListener('seeked', updatePreview);
+dom.video.addEventListener('loadeddata', updatePreview);
+
 /* ── Export ── */
 
 dom.exportBtn.addEventListener('click', exportVideo);
@@ -429,29 +608,43 @@ async function exportVideo() {
 
     const args = ['-i', inName, '-y'];
 
-    const { w, h, x, y } = getCropPixels();
-    if (w < state.videoWidth || h < state.videoHeight || x > 0 || y > 0) {
-      args.push('-vf', `crop=${w}:${h}:${x}:${y}`);
+    const filterParts = [];
+    const cp = getCropPixels();
+
+    if (cp.w < state.videoWidth || cp.h < state.videoHeight || cp.x > 0 || cp.y > 0) {
+      filterParts.push(`crop=${cp.w}:${cp.h}:${cp.x}:${cp.y}`);
+    }
+
+    if (state.hflip) filterParts.push('hflip');
+    if (state.vflip) filterParts.push('vflip');
+    if (state.rotation === 90) filterParts.push('transpose=1');
+    else if (state.rotation === 180) filterParts.push('hflip,vflip');
+    else if (state.rotation === 270) filterParts.push('transpose=2');
+
+    if (format === 'gif') {
+      filterParts.push('fps=10');
+      const s = Math.min(cp.w || state.videoWidth, 480);
+      filterParts.push(`scale=${s}:-1:flags=lanczos`);
+      filterParts.push('split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse');
+    }
+
+    if (filterParts.length > 0) {
+      args.push('-vf', filterParts.join(','));
     }
 
     const tStart = (state.trim.start / 100) * state.duration;
     const tEnd = (state.trim.end / 100) * state.duration;
-    if (tStart > 0) {
-      args.push('-ss', tStart.toFixed(2));
-    }
-    if (tEnd < state.duration) {
-      args.push('-to', tEnd.toFixed(2));
+    if (tStart > 0) args.push('-ss', tStart.toFixed(2));
+    if (tEnd < state.duration) args.push('-to', tEnd.toFixed(2));
+
+    if (format === 'webm') {
+      args.push('-c:v', 'libvpx-vp9', '-b:v', '1M', '-c:a', 'libopus');
+    } else if (format === 'gif') {
+    } else {
+      args.push('-preset', 'fast', '-c:a', 'aac');
     }
 
-    let codecArgs;
-    if (format === 'webm') {
-      codecArgs = ['-c:v', 'libvpx-vp9', '-b:v', '1M', '-c:a', 'libopus'];
-    } else if (format === 'gif') {
-      codecArgs = ['-vf', `fps=10,scale=${Math.min(w, 480)}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`];
-    } else {
-      codecArgs = ['-preset', 'fast', '-c:a', 'aac'];
-    }
-    args.push(...codecArgs, outName);
+    args.push(outName);
 
     dom.progressText.textContent = 'Processing video...';
     dom.progressFill.style.width = '20%';
@@ -479,9 +672,7 @@ async function exportVideo() {
     downloadBlob(blob, `cropped_${outName}`);
 
     dom.progressText.textContent = 'Done!';
-    setTimeout(() => {
-      dom.progressSection.hidden = true;
-    }, 2000);
+    setTimeout(() => { dom.progressSection.hidden = true; }, 2000);
   } catch (err) {
     dom.progressText.textContent = `Error: ${err.message}`;
     console.error(err);
@@ -501,10 +692,12 @@ async function loadFFmpeg() {
   }
 
   const { createFFmpeg } = FFmpegWASM;
-  state.ffmpeg = createFFmpeg({ log: true, corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js' });
+  state.ffmpeg = createFFmpeg({
+    log: true,
+    corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
+  });
 
   dom.progressText.textContent = 'Downloading FFmpeg (~30MB first time)...';
-
   await state.ffmpeg.load();
   state.ffmpegLoaded = true;
   dom.progressText.textContent = 'FFmpeg ready!';

@@ -11,7 +11,7 @@
   <div id="app">
     <header>
       <h1>Vid Crop Tool</h1>
-      <p class="subtitle">crop, trim, export</p>
+      <p class="subtitle">crop · trim · rotate · export</p>
     </header>
 
     <main>
@@ -33,84 +33,120 @@
       </div>
 
       <div id="editor-section" class="card" hidden>
-        <div id="video-container">
-          <video id="video-player" controls preload="metadata"></video>
-          <div id="crop-overlay">
-            <div id="crop-box">
-              <div class="crop-handle nw"></div>
-              <div class="crop-handle n"></div>
-              <div class="crop-handle ne"></div>
-              <div class="crop-handle e"></div>
-              <div class="crop-handle se"></div>
-              <div class="crop-handle s"></div>
-              <div class="crop-handle sw"></div>
-              <div class="crop-handle w"></div>
-            </div>
-          </div>
-        </div>
-
-        <div id="controls">
-          <div class="control-group">
-            <h3>Trim</h3>
-            <div id="trim-section">
-              <div class="trim-row">
-                <span class="trim-label">Start</span>
-                <input type="range" id="trim-start" min="0" max="100" value="0" step="0.1">
-                <span id="trim-start-time" class="time-display">0:00</span>
-              </div>
-              <div class="trim-row">
-                <span class="trim-label">End</span>
-                <input type="range" id="trim-end" min="0" max="100" value="100" step="0.1">
-                <span id="trim-end-time" class="time-display">0:00</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="control-group">
-            <h3>Crop Region</h3>
-            <div id="crop-dimensions">
-              <div class="dim-row">
-                <div class="dim-field">
-                  <label>X</label>
-                  <input type="number" id="crop-x" min="0" step="1">
-                </div>
-                <div class="dim-field">
-                  <label>Y</label>
-                  <input type="number" id="crop-y" min="0" step="1">
-                </div>
-                <div class="dim-field">
-                  <label>Width</label>
-                  <input type="number" id="crop-w" min="1" step="1">
-                </div>
-                <div class="dim-field">
-                  <label>Height</label>
-                  <input type="number" id="crop-h" min="1" step="1">
+        <div id="editor-layout">
+          <div id="editor-left">
+            <div id="video-container">
+              <video id="video-player" controls preload="metadata"></video>
+              <div id="crop-overlay">
+                <div id="crop-box">
+                  <div class="crop-handle nw"></div>
+                  <div class="crop-handle n"></div>
+                  <div class="crop-handle ne"></div>
+                  <div class="crop-handle e"></div>
+                  <div class="crop-handle se"></div>
+                  <div class="crop-handle s"></div>
+                  <div class="crop-handle sw"></div>
+                  <div class="crop-handle w"></div>
                 </div>
               </div>
-              <button id="reset-crop" class="btn btn-sm">Reset</button>
+            </div>
+            <div id="controls">
+              <div class="control-group">
+                <h3>Trim</h3>
+                <div id="trim-section">
+                  <div class="trim-row">
+                    <span class="trim-label">Start</span>
+                    <input type="range" id="trim-start" min="0" max="100" value="0" step="0.1">
+                    <span id="trim-start-time" class="time-display">0:00</span>
+                  </div>
+                  <div class="trim-row">
+                    <span class="trim-label">End</span>
+                    <input type="range" id="trim-end" min="0" max="100" value="100" step="0.1">
+                    <span id="trim-end-time" class="time-display">0:00</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="control-group">
+                <h3>Crop Region</h3>
+                <div id="crop-dimensions">
+                  <div class="dim-row">
+                    <div class="dim-field">
+                      <label>X</label>
+                      <input type="number" id="crop-x" min="0" step="1">
+                    </div>
+                    <div class="dim-field">
+                      <label>Y</label>
+                      <input type="number" id="crop-y" min="0" step="1">
+                    </div>
+                    <div class="dim-field">
+                      <label>Width</label>
+                      <input type="number" id="crop-w" min="1" step="1">
+                    </div>
+                    <div class="dim-field">
+                      <label>Height</label>
+                      <input type="number" id="crop-h" min="1" step="1">
+                    </div>
+                  </div>
+                  <button id="reset-crop" class="btn btn-sm">Reset</button>
+                </div>
+              </div>
+
+              <div class="control-group">
+                <h3>Aspect Ratio</h3>
+                <div id="aspect-presets">
+                  <button class="aspect-btn active" data-ratio="">Free</button>
+                  <button class="aspect-btn" data-ratio="1:1">1:1</button>
+                  <button class="aspect-btn" data-ratio="16:9">16:9</button>
+                  <button class="aspect-btn" data-ratio="4:3">4:3</button>
+                  <button class="aspect-btn" data-ratio="3:2">3:2</button>
+                  <button class="aspect-btn" data-ratio="9:16">9:16</button>
+                </div>
+              </div>
+
+              <div class="control-group">
+                <h3>Rotation</h3>
+                <div id="rotation-controls">
+                  <button id="rotate-cw" class="btn btn-icon" title="Rotate 90° CW">↻ 90°</button>
+                  <button id="rotate-ccw" class="btn btn-icon" title="Rotate 90° CCW">↺ 90°</button>
+                  <button id="flip-h" class="btn btn-icon" title="Flip Horizontal">⇔</button>
+                  <button id="flip-v" class="btn btn-icon" title="Flip Vertical">⇕</button>
+                  <span id="rotation-badge"></span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div id="action-bar">
-            <button id="export-btn" class="btn btn-primary" disabled>
-              <span class="btn-text">Export Video</span>
-              <span class="btn-loader" hidden></span>
-            </button>
-            <div id="format-selector">
-              <label>Format:</label>
-              <select id="output-format">
-                <option value="mp4">MP4</option>
-                <option value="webm">WebM</option>
-                <option value="gif">GIF</option>
-              </select>
+          <div id="editor-right">
+            <div class="control-group">
+              <h3>Preview</h3>
+              <div id="preview-container">
+                <canvas id="preview-canvas"></canvas>
+                <p class="preview-dim" id="preview-dim-label">—</p>
+              </div>
             </div>
-          </div>
 
-          <div id="progress-section" hidden>
-            <div class="progress-bar">
-              <div id="progress-fill"></div>
+            <div id="bottom-actions">
+              <div id="format-selector">
+                <label>Format:</label>
+                <select id="output-format">
+                  <option value="mp4">MP4</option>
+                  <option value="webm">WebM</option>
+                  <option value="gif">GIF</option>
+                </select>
+              </div>
+              <button id="export-btn" class="btn btn-primary" disabled>
+                <span class="btn-text">Export Video</span>
+                <span class="btn-loader" hidden></span>
+              </button>
             </div>
-            <p id="progress-text">Processing...</p>
+
+            <div id="progress-section" hidden>
+              <div class="progress-bar">
+                <div id="progress-fill"></div>
+              </div>
+              <p id="progress-text">Processing...</p>
+            </div>
           </div>
         </div>
       </div>
