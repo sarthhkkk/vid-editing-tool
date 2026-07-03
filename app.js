@@ -24,7 +24,7 @@ const dom = {
   aspectBtns: $$('.aspect-btn'),
   rotateCw: $('#rotate-cw'), rotateCcw: $('#rotate-ccw'),
   flipH: $('#flip-h'), flipV: $('#flip-v'), rotationBadge: $('#rotation-badge'),
-  previewCanvas: $('#preview-canvas'), previewDim: $('#preview-dim-label'),
+  previewCanvas: $('#preview-canvas'), previewDim: $('#preview-dim-label'), videoInfo: $('#video-info'),
   exportBtn: $('#export-btn'), btnText: $('#export-btn .btn-text'),
   btnLoader: $('#export-btn .btn-loader'), outputFormat: $('#output-format'),
   progressSection: $('#progress-section'), progressFill: $('#progress-fill'),
@@ -153,6 +153,24 @@ function initOnce() {
   /* Export */
   dom.exportBtn.addEventListener('click', exportVideo);
 
+  /* Keyboard shortcuts */
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && state.videoFile) {
+      const cur = dom.cropOverlay.style.display;
+      dom.cropOverlay.style.display = cur === 'none' ? '' : 'none';
+    }
+    if (e.key === ' ' && state.videoFile) {
+      e.preventDefault();
+      if (dom.video.paused) dom.video.play(); else dom.video.pause();
+    }
+  });
+
+  /* Double-click on crop box to play/pause */
+  dom.cropBox.addEventListener('dblclick', () => {
+    if (!state.videoFile) return;
+    if (dom.video.paused) dom.video.play(); else dom.video.pause();
+  });
+
   /* Window resize */
   window.addEventListener('resize', () => {
     if (!state.videoFile) return;
@@ -164,6 +182,7 @@ function initOnce() {
 /* ── Video Loading ── */
 
 function loadVideo(file) {
+  console.log('[loadVideo]', file.name, file.size, file.type);
   _loadCancel = true;
   if (state.videoUrl) URL.revokeObjectURL(state.videoUrl);
 
@@ -176,13 +195,28 @@ function loadVideo(file) {
   dom.exportBtn.disabled = true;
   dom.exportBtn.textContent = 'Loading...';
 
+  dom.cropOverlay.style.display = '';
+  dom.cropBox.style.display = '';
+
   _loadCancel = false;
 
   const onMeta = () => {
     if (_loadCancel) return;
+    console.log('[onMeta]', dom.video.videoWidth, 'x', dom.video.videoHeight, 'dur:', dom.video.duration);
     state.videoWidth = dom.video.videoWidth;
     state.videoHeight = dom.video.videoHeight;
     state.duration = dom.video.duration;
+    if (!state.videoWidth || !state.videoHeight) {
+      console.warn('[onMeta] dimensions are 0 — retrying with canplay');
+      dom.video.addEventListener('canplay', () => {
+        if (_loadCancel) return;
+        state.videoWidth = dom.video.videoWidth || state.videoWidth;
+        state.videoHeight = dom.video.videoHeight || state.videoHeight;
+        fitVideoContainer();
+        updateCropBox();
+      }, { once: true });
+      return;
+    }
 
     dom.exportBtn.disabled = false;
     dom.exportBtn.textContent = 'Export Video';
@@ -193,30 +227,34 @@ function loadVideo(file) {
     syncDimensionInputs();
     updateTrimDisplay();
     updatePreview();
+    showVideoInfo();
+    autoSelectAspect();
   };
 
   const onError = () => {
     if (_loadCancel) return;
+    console.error('[loadVideo] error event', dom.video.error);
     dom.exportBtn.disabled = false;
     dom.exportBtn.textContent = 'Error loading video';
     dom.progressSection.hidden = false;
-    dom.progressText.textContent = 'Unsupported or corrupted file. Try a different video.';
+    dom.progressText.textContent = `Error: ${dom.video.error?.message || 'Unsupported or corrupted file'}`;
   };
 
-  state.video.addEventListener('loadedmetadata', onMeta, { once: true });
-  state.video.addEventListener('error', onError, { once: true });
+  dom.video.addEventListener('loadedmetadata', onMeta, { once: true });
+  dom.video.addEventListener('error', onError, { once: true });
 
   const loadTimeout = setTimeout(() => {
     if (_loadCancel) return;
+    console.warn('[loadVideo] timed out after 30s');
     _loadCancel = true;
     dom.exportBtn.disabled = false;
     dom.exportBtn.textContent = 'Video load timed out';
     dom.progressSection.hidden = false;
-    dom.progressText.textContent = 'The file is too large or in an unsupported format. Try a smaller MP4 file.';
+    dom.progressText.textContent = 'Timed out. Check console (F12) for details, or try a smaller/standard MP4.';
   }, 30000);
 
-  state.video.addEventListener('loadedmetadata', () => clearTimeout(loadTimeout), { once: true });
-  state.video.addEventListener('error', () => clearTimeout(loadTimeout), { once: true });
+  dom.video.addEventListener('loadedmetadata', () => clearTimeout(loadTimeout), { once: true });
+  dom.video.addEventListener('error', () => clearTimeout(loadTimeout), { once: true });
 
   dom.video.src = state.videoUrl;
 }
@@ -224,8 +262,8 @@ function loadVideo(file) {
 /* ── Layout ── */
 
 function fitVideoContainer() {
-  const maxW = dom.videoContainer.clientWidth;
-  if (maxW < 1) return;
+  let maxW = dom.videoContainer.clientWidth;
+  if (maxW < 1) maxW = 640;
   const aspect = state.videoWidth / state.videoHeight;
   const maxH = Math.min(480, maxW / aspect);
   let w, h;
@@ -456,6 +494,46 @@ function updatePreview() {
   dom.previewDim.textContent = `${cp.w} \u00D7 ${cp.h}`;
 }
 
+/* ── Video Info & Auto Aspect ── */
+
+function showVideoInfo() {
+  const w = state.videoWidth;
+  const h = state.videoHeight;
+  const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+  const g = gcd(w, h);
+  const ar = `${w / g}:${h / g}`;
+  const minDim = Math.min(w, h);
+  let quality;
+  if (minDim >= 3840) quality = '4K';
+  else if (minDim >= 1920) quality = 'Full HD';
+  else if (minDim >= 1280) quality = 'HD';
+  else if (minDim >= 720) quality = 'SD';
+  else quality = 'Low';
+  dom.videoInfo.textContent = `${w} \u00D7 ${h} \u00B7 ${ar} \u00B7 ${quality}`;
+}
+
+function autoSelectAspect() {
+  const ratio = state.videoWidth / state.videoHeight;
+  const presets = [
+    { label: '1:1', val: 1 },
+    { label: '16:9', val: 16 / 9 },
+    { label: '4:3', val: 4 / 3 },
+    { label: '3:2', val: 3 / 2 },
+    { label: '3:4', val: 3 / 4 },
+    { label: '9:16', val: 9 / 16 },
+  ];
+  let closest = presets[0];
+  let minDiff = Math.abs(ratio - closest.val);
+  for (const p of presets) {
+    const d = Math.abs(ratio - p.val);
+    if (d < minDiff) { minDiff = d; closest = p; }
+  }
+  if (minDiff > 0.1) return;
+  dom.aspectBtns.forEach((b) => b.classList.toggle('active', b.dataset.ratio === closest.label));
+  state.aspectLocked = true;
+  state.aspectRatio = closest.val;
+}
+
 /* ── Export ── */
 
 async function exportVideo() {
@@ -470,6 +548,7 @@ async function exportVideo() {
 
   try {
     await loadFFmpeg();
+    const ffmpeg = state.ffmpeg;
 
     const format = dom.outputFormat.value;
     const inName = `input${getExt(state.videoFile.name)}`;
