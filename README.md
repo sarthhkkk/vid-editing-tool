@@ -10,14 +10,19 @@ Web-based video cropping and trimming tool — fully client-side, no uploads, no
 
 ## Features
 
-- **Crop** — draggable, resizable crop box with 8 handles. 4-segment dimmer shows the excluded area.
-- **Trim** — start/end range sliders with auto-cross prevention and auto-pause at end marker.
-- **Aspect Ratio** — 1:1, 16:9, 4:3, 3:2, 3:4, 9:16 presets with lock. Auto-detects the original ratio on load.
-- **Rotation** — 90° CW/CCW, horizontal/vertical flip. Applied in the export filter chain.
-- **Preview** — live cropped region rendered to canvas, updates in real-time.
-- **Export** — MP4, WebM, or GIF. Progress bar tracks ffmpeg encode time.
-- **Keyboard** — `Space` play/pause, `Escape` toggle crop overlay.
-- **Dark theme** — Aurora Glass.
+- **Upload** — drag & drop or browse to select a video file. MP4, WebM, MOV, AVI supported.
+- **Crop** — draggable, resizable crop box with 8 corner/edge handles. 4-segment dimmer highlights the excluded area. Manual X, Y, Width, Height numeric inputs for precise control.
+- **Trim** — start/end range sliders with auto-cross prevention and auto-pause at end marker. Time display in `m:ss` format.
+- **Aspect Ratio** — Free, 1:1, 16:9, 4:3, 3:2, 3:4, 9:16 presets with lock (constrains crop resize to maintain ratio).
+- **Auto Detect** — on load, automatically identifies the original video aspect ratio (highlights matching preset) and resolution quality (SD / HD / Full HD / 4K).
+- **Rotation & Flip** — 90° CW, 90° CCW, horizontal flip, vertical flip. Applied in the export filter chain. Rotation badge shows current state.
+- **Live Preview** — cropped region rendered to canvas in real-time. Updates on seek, time update, and crop change. Shows exact output pixel dimensions.
+- **Export** — MP4, WebM, or GIF. FFmpeg.wasm core (~30MB) auto-downloads on first export and caches in browser. Progress bar tracks encode time via ffmpeg log output. File downloads automatically when done.
+- **Error Handling** — clear messages for unsupported formats, corrupt files, and load timeouts. 30-second metadata timeout.
+- **Keyboard Shortcuts** — `Space` play/pause, `Escape` toggle crop overlay.
+- **Double-click** on crop area toggles play/pause.
+- **Responsive** — two-column layout on desktop, stacks vertically on mobile (≤768px).
+- **Dark Theme** — Aurora Glass design. No light mode.
 
 ## How it works
 
