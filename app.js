@@ -138,6 +138,20 @@ function loadVideo(file) {
 
   state.video.addEventListener('loadedmetadata', onMeta, { once: true });
   state.video.addEventListener('error', onError, { once: true });
+
+  const loadTimeout = setTimeout(() => {
+    if (_loadCancel) return;
+    _loadCancel = true;
+    dom.exportBtn.disabled = false;
+    dom.exportBtn.textContent = 'Video load timed out';
+    dom.progressSection.hidden = false;
+    dom.progressText.textContent = 'The file is too large or in an unsupported format. Try a smaller MP4 file.';
+  }, 30000);
+
+  const clearTimer = () => { clearTimeout(loadTimeout); };
+  state.video.addEventListener('loadedmetadata', clearTimer, { once: true });
+  state.video.addEventListener('error', clearTimer, { once: true });
+
   dom.video.src = state.videoUrl;
 }
 
