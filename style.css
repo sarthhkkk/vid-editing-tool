@@ -174,7 +174,7 @@ header h1 {
 #crop-box::before {
   content: '';
   position: absolute;
-  inset: -9999px;
+  inset: -12px;
   pointer-events: auto;
   z-index: -1;
 }
