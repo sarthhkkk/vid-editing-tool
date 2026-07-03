@@ -26,21 +26,47 @@ Web-based video cropping and trimming tool — fully client-side, no uploads, no
 3. Click Export — FFmpeg.wasm (~30MB) downloads on first use, then the video is encoded entirely in your browser.
 4. The cropped file downloads automatically.
 
+## Setup
+
+### Option 1: Clone from GitHub
+
+```bash
+git clone https://github.com/sarthhkkk/vid-editing-tool.git
+cd vid-editing-tool
+python -m http.server 5500
+```
+
+Open http://localhost:5500 in your browser.
+
+### Option 2: Download ZIP
+
+Download the repo as a ZIP, extract it, and serve it:
+
+```bash
+cd path/to/vid-editing-tool
+python -m http.server 5500
+```
+
+### Option 3: Any static server
+
+This works with any static file server:
+
+```bash
+# Python
+python -m http.server 5500
+
+# Node (if you have npx)
+npx serve .
+
+# Or just open index.html directly (works in most browsers)
+```
+
+No installation, no `npm install`, no build step. Just serve the files.
+
 ## Tech stack
 
 - [FFmpeg.wasm](https://github.com/nicedoc/ffmpegwasm) v0.11.6 — runs FFmpeg in the browser via WebAssembly
 - Plain HTML/CSS/JS — no build step, no framework, no backend
-- Python HTTP server for local development (`python -m http.server 5500`)
-
-## Usage
-
-```bash
-cd vid_editing_tool
-python -m http.server 5500
-# Open http://localhost:5500
-```
-
-No installation, no `npm install`, no build step. Just serve the directory.
 
 ## Browser support
 
